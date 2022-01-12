@@ -12,7 +12,7 @@ But you don't have to implement all the steps above.
 
 ## 2- Recommended Tools
 
-- Gitlab-CI
+- Jenkins
 - docker-compose
 - snyk
 - Ansible
