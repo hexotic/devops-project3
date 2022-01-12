@@ -6,8 +6,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    expose:
-      - "8000"
     ports:
       - "8000:8000"
     links:
@@ -18,21 +16,19 @@ services:
       - POSTGRES_PASSWORD=postgres
     depends_on:
       - postgres
-    command: >
-      sh -c "/code/entry_point.sh"
     volumes:
-      - ./app:/app
+      - /app:/app
 
   postgres:
     container_name: postgres
-    image: postgres
+    image: postgres:14
     ports:
       - "5432:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     volumes:
-      - ./db:/var/lib/postgresql/data
+      - /db:/var/lib/postgresql/data
 
 volumes:
   db:
