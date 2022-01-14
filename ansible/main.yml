@@ -1,0 +1,10 @@
+- name:  "deploy docker compose"
+  hosts: preprod
+  become: true
+  roles:
+    - docker_role
+    - dockercompose_role
+  
+  tasks:
+    - name: "docker-compose"
+      command: 'docker-compose --env-file ./env_file up -d'
