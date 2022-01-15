@@ -1,3 +1,5 @@
+[![Build Status](http://52.207.52.88:8080/buildStatus/icon?job=deploy_django_app)](http://52.207.52.88:8080/job/deploy_django_app/)
+
 # Devops Project 3 : Django webapp CICD
 
 ## 1- Goal
