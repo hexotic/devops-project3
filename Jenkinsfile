@@ -147,21 +147,22 @@ pipeline {
             }
         }
 
-        // stage ('Test pre prod deployment') {
-        //     agent any
+        stage ('Test pre prod deployment') {
+            agent any
 
-        //     steps {
-        //         script {
-        //             sh '''
-        //                cd $WORKSPACE/terraform/preprod
-        //                read EC2_IP IP_PRIV < ec2-info.txt || true
-        //                curl http://localhost:8000 | head -n 100 | grep -iq "django"
-        //                terraform destroy -auto-approve -no-color
-        //            '''
-        //         }
-        //     }
-        // }
-// curl --retry 10 http://${EC2_IP}:8000 | grep -iq "django"
+            steps {
+                script {
+                    sh '''
+                       cd $WORKSPACE/terraform/preprod
+                       read EC2_IP IP_PRIV < ec2-info.txt || true
+                       curl --retry 10 http://${EC2_IP}:8000 > index.html || true
+                       cat index.html | grep -iq "django" || true
+                       terraform destroy -auto-approve -no-color 
+                   '''
+                }
+            }
+        }
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////// 
      ///////////////////////////////////   PARTIE PROD  ///////////////////////////////////
