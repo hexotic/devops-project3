@@ -180,6 +180,10 @@ pipeline {
                 withCredentials([sshUserPrivateKey(credentialsId: 'ec2_prod_private_key', keyFileVariable: 'keyfile', usernameVariable: 'NUSER')]) {
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         script {
+                            timeout(time: 15, unit: 'MINUTES') {
+                                input message: 'Do you want to approve deployment in production?', ok: 'Yes'
+                            }
+
                             sh '''
                             pwd
                             echo $WORKSPACE
@@ -215,10 +219,6 @@ pipeline {
             agent any
             steps {
                 script {
-                    timeout(time: 15, unit: 'MINUTES') {
-                    input message: 'Do you want to approve deployment in production?', ok: 'Yes'
-                    }
-
                     sh '''
                         cd $WORKSPACE/terraform/prod
                         cat ec2-info.txt
