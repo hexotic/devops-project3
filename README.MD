@@ -1,5 +1,3 @@
-[![Build Status](http://52.207.52.88:8080/buildStatus/icon?job=deploy_django_app)](http://52.207.52.88:8080/job/deploy_django_app/)
-
 
 [![Build Status](http://52.207.52.88:8080/buildStatus/icon?job=mylca-test)](http://52.207.52.88:8080/job/mylca-test/)
 
