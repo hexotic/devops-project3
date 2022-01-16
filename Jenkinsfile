@@ -4,10 +4,6 @@ pipeline {
         IMAGE_NAME = 'projet_django'
         VERSION = 'v1.0.0'
         IMAGE_TAG = "${VERSION}-${env.BUILD_NUMBER}"
-        STAGING = 'projetajc-group1-preprod'
-        PRODUCTION = 'projetajc-group1-prod'
-        CONTAINER_NAME = 'web'
-        EC2_PRODUCTION_HOST = '54.160.242.209'
     }
 
     agent none
@@ -57,7 +53,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                       curl http://localhost:8000 | head -n 100 | grep -iq "django"
+                       curl http://localhost:80 | head -n 100 | grep -iq "django"
                    '''
                 }
             }
@@ -151,6 +147,10 @@ pipeline {
 
         stage ('Test pre prod deployment') {
             agent any
+            environment {
+                AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
+                AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+            }
 
             steps {
                 script {
@@ -159,7 +159,7 @@ pipeline {
 
                        read EC2_IP IP_PRIV < ec2-info.txt || true
                        CURL_OPTS="-v -4 --connect-timeout 10 --retry 10 --retry-connrefused --retry-max-time 40 --retry-delay 10"
-                       curl ${CURL_OPTS} -o index.html http://${EC2_IP}:8000
+                       curl ${CURL_OPTS} -o index.html http://${EC2_IP}:80
                        cat index.html | grep -iq "django"
 
                        # Attempt to destroy infrastructure but don't fail if a problem occurs.
@@ -251,7 +251,7 @@ pipeline {
 
                        read EC2_IP IP_PRIV < ec2-info.txt || true
                        CURL_OPTS="-v -4 --connect-timeout 10 --retry 10 --retry-connrefused --retry-max-time 40 --retry-delay 10"
-                       curl ${CURL_OPTS} -o index.html http://${EC2_IP}:8000
+                       curl ${CURL_OPTS} -o index.html http://${EC2_IP}:80
                        cat index.html | grep -iq "django"
                    '''
                 }

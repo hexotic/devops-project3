@@ -1,4 +1,4 @@
-Django
-psycopg2-binary
-Pillow
-requests
+Django==4.0.1
+psycopg2-binary==2.9.3
+Pillow==9.0.0
+requests==2.27.1
