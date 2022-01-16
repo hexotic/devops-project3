@@ -58,7 +58,7 @@ sudo service jenkins restart
 Comme illustré dans l'image ci-dessous, le pipeline CI/CD réalisé permet d'utiliser différents outils (pré-requis) en implémentant toutes les phases du pipeline recommandé. Brièvement, le code envoyé sur GitHub par les développeurs var être détecté lors de son intégration sur la branche principale par l'orchestrateur Jenkins qui va déclecher la suites des étapes :
 
 * Création d'une image de l'application avec Docker (via un Dockerfile)
-* Scan de sécurité avec Snyk
+* Scan de sécurité avec Snyk, plugin gratuit qui s'intégre directement aux outils de developpement et aux pipelines automatisés afin de rechercher, prioritiser et réparer les vulnérabilités de sécurité du code, des dépendances, des contenaires et dans l'infrastructure as code. Cet outils a recourt à l’analyse sémantique pour identifier les bugs de sécurité et de performance, entre autres, des langages C#, Ruby, PHP, Go, Java, Javascript et Python.
 * Lancement de l'application conteneurisée avec Docker-Compose
 * Test de l'affichage de l'application sur un navigateur
 * Stockage de l'image sur un dépot distant (DockerHub)
@@ -278,7 +278,7 @@ L'installation se finalise par l'installation des plugins suggérés et la créa
 <img src="./img/jenkins_init/startup_jenkins.png" />
 </div><br>
 
-L'objectif de cette partie est de permettre à l'orchestrateur Jenkins de piloter et d'automatiser tout le pipeline lors de la validation du code de l'application par l'intégration de ce code sur la branche "master". 
+L'objectif de cette partie est de permettre à l'orchestrateur Jenkins de piloter et d'automatiser tout le pipeline lors de la validation du code de l'application par l'intégration de ce code sur la branche "master".
 
 Pour cela, il est nécessaire d'installer les plugins qui seront nécessaires au pipeline pour :
 
@@ -332,21 +332,22 @@ Pour finir la configuration de Jenkins, les plugins pour Slack et Snyk sont déf
 <img src="./img/config/snyk_config.png" />
 </div><br>
 
-Le fichier Jenkinsfile, présent sur le dépôt GitHub, qui permet de décrire et d'automatiser le pipeline est :
+Le fichier Jenkinsfile, présent sur le dépôt GitHub, permet de décrire et d'automatiser le pipeline. il est composé des sections suivantes :
+
+* Les variables d'environnement nécessaires pour certaines étapes
 
 ```yaml
-pipeline {
     environment {
         USERNAME = 'projet03ajc'
         IMAGE_NAME = 'projet_django'
         VERSION = 'v1.0.0'
         IMAGE_TAG = "${VERSION}-${env.BUILD_NUMBER}"
     }
+```
 
-    agent none
+* "Build Application" : commandes pour le nettoyage de l'environnement Docker et la construction de l'image (voir chapitre précédent "conteneurisation") via les variables d'environnements citées ci-dessus
 
-    stages {
-
+```yaml
         stage ('Build Application') {
             agent any
             steps {
@@ -358,7 +359,11 @@ pipeline {
                 }
             }
         }
+```
 
+* "Security scan" : commandes pour réaliser le scan de sécurité via le plugin Snyk via l'utilisation d'un token d'identification du compte Snyk pour la sécurisation des identifiants, mots de passe et résultats
+
+```yaml
         stage('Security scan') {
             agent any
             environment {
@@ -371,7 +376,11 @@ pipeline {
                 """
             }
         }
+```
 
+* "Run test containers" : commandes pour lancer les conteneurs avec docker-compose (voir chapitre précédent "conteneurisation") avec `sleep 5` permettant à Docker-compose d'avoir le temps de lancer les contenaires
+
+```yaml
         stage ('Run test containers') {
             agent any
             steps {
@@ -383,8 +392,11 @@ pipeline {
                 }
             }
         }
+```
 
+* "Test application" : commande pour tester l'affichage de l'application en local via une commande `curl` pour obtenir le contenu de la page et la recherche du mot "django" via `grep` (avec l'option `-i`pour ne pas tenir compte de la casse)
 
+```yaml
         stage ('Test application') {
             agent any
             steps {
@@ -395,7 +407,11 @@ pipeline {
                 }
             }
         }
+```
 
+* "Save artifact" : commandes pour envoyer l'image générée et validée de l'application sur DockerHub (tagguée avec le numéro du "build" du pipeline) via l'utilisation d'une variable d'environnement pour l'identification sécurisée au compte DockerHub. Après avoir poussé l'image sur le DockerHub, toutes les images ainsi que les contenaires sont supprimés de l'environnement Docker de la machine locale
+
+```yaml
         stage ('Save artifact') {
             agent any
             environment {
@@ -411,7 +427,11 @@ pipeline {
                 }
             }
         }
+```
 
+* "Deploy pre prod infra" : commandes Terraform pour créer la machine virtuelle (EC2) de l'environnement preprod sur AWS (voir chapitre "Déploiement continu"). Les variables d'environnement permettent içi de sécuriser la connexion à AWS via des `AWS_ACCESS_KEY_ID` et `AWS_SECRET_ACCESS_KEY`.
+
+```yaml
         stage ('Deploy pre prod infra') {
             agent any
             environment {
@@ -448,7 +468,11 @@ pipeline {
                 }
             }
         }
+```
 
+* "Deploy pre prod app" : commandes pour le déploiement de l'application sur la preprod via Ansible (voir chapitre "Déploiement continu")
+
+```yaml
         stage ('Deploy pre prod app') {
             agent any
 
@@ -471,7 +495,11 @@ pipeline {
                 }
             }
         }
+```
 
+* "Test pre prod deployment" : commandes permettant de tester le fonctionnement de l'application sur le navigateur avec l'URL de la preprod via une commande `curl` pour obtenir le contenu de la page et la recherche du mot "django" via `grep`. Ce test est réalisé plusieurs fois pour laisser le temps à l'infrastructure et à l'application de se créer. Cette instance est détruite automatiquement suite à la validation du test
+
+```yaml
         stage ('Test pre prod deployment') {
             agent any
             environment {
@@ -493,18 +521,24 @@ pipeline {
                 }
             }
         }
+```
 
+* "Deploy prod infra" : commandes Terraform pour créer la machine virtuelle (EC2) de l'environnement prod sur AWS (voir chapitre "Déploiement continu"). Une fois que le test de la preprod est validé, le pipeline est mis en attente pour une validation manuelle d'un manager pour la création et la mise en place de la prod
+
+```yaml
         stage ('Deploy prod infra') {
             agent any
             environment {
                 AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
                 AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
             }
-
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'ec2_prod_private_key', keyFileVariable: 'keyfile', usernameVariable: 'NUSER')]) {
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         script {
+                            timeout(time: 15, unit: 'MINUTES') {
+                            input message: 'Do you want to approve deployment in production?', ok: 'Yes'
+                            }
                             sh '''
                             pwd
                             echo $WORKSPACE
@@ -530,15 +564,15 @@ pipeline {
                 }
             }
         }
+```
 
+* "Deploy prod app" : commandes pour le déploiement de l'application sur la prod via Ansible (voir chapitre "Déploiement continu")
+
+```yaml
         stage('Deploy prod app') {
             agent any
             steps {
                 script {
-                    timeout(time: 15, unit: 'MINUTES') {
-                    input message: 'Do you want to approve deployment in production?', ok: 'Yes'
-                    }
-
                     sh '''
                         cd $WORKSPACE/terraform/prod
                         cat ec2-info.txt
@@ -557,7 +591,11 @@ pipeline {
                 }
             }
         }
+```
 
+* "Test prod deployment" : commandes permettant de tester le fonctionnement de l'application sur le navigateur avec l'URL de la preprod via une commande `curl` pour obtenir le contenu de la page et la recherche du mot "django" via `grep`. Ce test est réalisé plusieurs fois pour laisser le temps à l'infrastructure et à l'application de se créer. Cette instance est détruite automatiquement suite à la validation du test
+
+```yaml
         stage ('Test prod deployment') {
             agent any
 
@@ -573,9 +611,11 @@ pipeline {
                 }
             }
         }
+```
 
-    }
+* "Post-actions" : commandes permettant de recevoir des notifications sur slack du fonctionnement de la pipeline. Nous pouvons avoir deux types de notifications, `success` pour la reussite de la pipeline sans erreurs et `failure` pour l'echec à n'importe quel stage de la pipeline.
 
+```yaml
     post {
         success{
             slackSend (color: '#00FF00', message: "SUCCESSFUL: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
@@ -584,24 +624,7 @@ pipeline {
             slackSend (color: '#FF0000', message: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
         }
     }
-}
 ```
-
-Pour expliciter ce fichier, les différentes étapes sont :
-
-* "Build Application" : commandes pour le nettoyage de l'environnement et la construction de l'image (voir chapitre précédent "conteneurisation")
-* "Security scan" : commandes pour réaliser le scan de sécurité via le plugin Snyk
-* "Run test containers" : commandes pour lancer les conteneurs avec docker-compose (voir chapitre précédent "conteneurisation")
-* "Test application" : commande pour tester l'affichage de l'application en local via une commande `curl` pour obtenir le contenu de la page et la recherche du mot "django" via `grep` (avec l'option `-i`pour ne pas tenir compte de la casse)
-* "Save artifact" : commandes pour envoyer l'image générée et validée de l'application sur DockerHub (tagguée avec le numéro du "build" du pipeline)
-* "Deploy pre prod infra" : commandes Terraform pour créer la machine virtuelle (EC2) de l'environnement preprod sur AWS (voir ci-dessous)
-* "Deploy pre prod app" : commandes pour le déploiement de l'application sur la preprod via Ansible (voir ci-dessous)
-* "Test pre prod deployment" : commandes
-* "Deploy prod infra"
-* "Deploy prod app"
-* "Test prod deployment"
-* "Post"
-
 
 ### Déploiement continu (CD)
 
