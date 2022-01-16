@@ -628,6 +628,180 @@ Le fichier Jenkinsfile, présent sur le dépôt GitHub, permet de décrire et d'
 
 ### Déploiement continu (CD)
 
+#### Environnements
+
+Le but du **déploiement continu** est de pouvoir mettre en production en minimisant les risques en utilisant un étape de déploiement dans un environnement de **préproduction**.
+<br> Pour ce projet nous déploierons l'application sur des machines dans le cloud AWS.<br>
+Pour ce projet, nous avons opté pour une seule machine pour des raisons de simplicité (notre serveur n'ayant pas beaucoup de requêtes).
+
+##### Environnement de préproduction
+
+L'environnement de préproduction doit être le plus proche de celui de production afin de pouvoir détecter des problèmes et ainsi être confiant dans le déploiement en production.
+Cependant cela peut-être couteux si l'infrastructure est importante donc il y a toujours des compromis à faire.
+<br>
+Pour ce projet nous avons opté pour une instance EC2 qui sera créée et supprimer à chaque déploiement en préproduction.
+Cela permet d'avoir une machine vierge et de pouvoir s'apercevoir si l'application est complète.
+
+##### Environnement de production
+
+Il y a plusieurs façons d'effectuer un déploiement sur les serveurs :
+
+* **rolling update** et **canary**: le déploiement est effectué sur une partie du parc au fur et à mesure
+* **blue/green**: déploiement sur le même nombre de serveurs
+* **recreate**: toutes les intances sont updatées en même temps
+Nous avons choisi a stratégie de **recreate** car nous n'avons qu'une seule machine.
+
+##### Infrastructure as Code (IaC)
+
+Pour mettre en place ces différents environnements de façon automatique, nous avons besoin de fichiers de configuration et du code de création. De plus l'environnement de préproduction et production étant similaire, le code pourra être réutilisé tout en étant paramétrisable pour chaque étape.
+<br>
+Nous avons utilisé les outils suivants pour la préproduction et production :
+
+* `terraform`: création de l'infrastructure cloud: création de l'EC2, Security Group, etc.
+* `ansible`: provisioning des serveurs. Installation des packages et fichiers nécessaires au fonctionnement de notre application.
+
+Le code nécessaire est mis dans le dépôt `git` du projet.
+
+#### Terraform
+
+```
++--- terraform
+|   +--- modules
+|   |   +--- ec2module
+|   |   |   +--- main.tf
+|   |   |   +--- outputs.tf
+|   |   |   +--- variables.tf
+|   +--- preprod
+|   |   +--- backend.tf
+|   |   +--- main.tf
+|   +--- prod
+|   |   +--- backend.tf
+|   |   +--- main.tf
+```
+
+Le répertoire Terraform est composé de trois sous répertoires. Un répertoire modules qui contient le module ec2module, qui permet de créer les ec2. Ce module sera appelé par la suite par les fichiers main.tf du répertoire preprod, relatif à la création de l’EC2 preprod et celui du répertoire prod, relatif à la création de l’EC2 prod. 
+
+* Module ec2module
+Le fichier main.tf possede la struture suivante
+
+```
+data "aws_ami" "my-ami" {
+  most_recent = true
+  owners      = ["099720109477"]
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal*"]
+  }
+}
+
+resource "aws_instance" "myec2" {
+  ami             = data.aws_ami.my-ami.id
+  instance_type   = var.instance_type
+  key_name        = var.key_name
+  security_groups = ["${var.sg_name}"]
+  tags = {
+    Name = "ec2_${var.env}_${var.user_name}"
+  }
+
+  # Prepare instance for ansible
+  user_data = <<-EOF
+      #!/bin/bash
+      sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+      sudo systemctl restart ssh
+      sudo sh -c 'echo -n ubuntu:${var.user_passwd} | chpasswd'
+  EOF
+}
+```
+
+La ressource  data "aws_ami" permet de selectionner la derniere version d'une image Ubuntu focal. Terraform va lire a partir de la source data "aws_ami" et exporte le resultat sous le nom "my-ami" au niveau de la  resource "aws_instance". Au niveau de cette derniere resource, en plus de la definition de l'ami, on definit aussi le type d'instance instance_type, le nom de la clé privé key_name fournie par AWS, le groupe de sécurité groupe security_groups ainsi que le tag de l'ec2. Les valeurs de ces variables sont définies au niveau du fichier variables.tf. Toujours au niveau de la ressource "aws_instance", on utilise le remote provisioner user_data pour configurer le serveur ssh et permettre l'accés à l'ec2 créée.
+
+Les differentes variables utilisées au niveau de la resource "aws_instance" sont definies dans le  fichier variables.tf suivant
+
+```
+variable "ami" {
+  default = "ami-04505e74c0741db8d"
+  type    = string
+}
+variable "instance_type" {
+  default = "t2.small"
+  type    = string
+}
+
+variable "user_name" {
+  default = "Django-app"
+  type    = string
+}
+
+variable "sg_name" {
+  default = "christophe-sg-web"
+  type    = string
+}
+variable "key_name" {
+  default = "christophe-kp"
+  type    = string
+}
+
+variable "env" {
+  default = ""
+  type    = string
+}
+
+variable "user_passwd" {
+  default = ""
+  type    = string
+}
+```
+
+Le module ec2module contient en plus des fichiers main.tf et varaiables.tf, le fichier outputs.tf qui contients les deux outputs suivants:
+
+```
+output "ec2_public_ip" {
+  value = aws_instance.myec2.public_ip
+}
+
+output "ec2_private_ip" {
+  value = aws_instance.myec2.private_ip
+}
+```
+qui permettent d'obtenir les adresses IP publiquess et privés, respectivement. 
+
+* Les sous repertoires preprod et prod on a exactement les memes fichiers main.tf et backend.tf, bien sure en tenant en compte les différentes modifications nominatives. Dans le fichier backend.tf, defini par
+
+```
+terraform {
+  backend "s3" {
+    bucket = "projet03ajc-bucket"
+    key    = "prod.tfstate"
+    region = "us-east-1"
+  }
+}
+```
+
+On ajoute une configuration  de Terraform qui indique que le backend sera un S3. Ici, on donne le nom du bucket qui est créé au préalable sur AWS et la région dans laquelle se trouve le compartiment. On donne comme clé le nom du  fichier .tfstate.  Ce fichier est stocké à distance pour permettre aux différents membres de l’équipe de travailler avec les mêmes ressources.  Ce fichier est très important car il représente en quelque sorte une base de données qui permet de cartographier l’état de l’infrastructure. 
+
+Dans le fichier main.tf, on a les commandes suivantes 
+
+```
+provider "aws" {
+  region = "us-east-1"
+}
+
+module "ec2_prod" {
+  source        = "../modules/ec2module"
+  env           = "prod"
+  instance_type = "t2.small"
+  user_passwd   = "ubuntu"
+}
+
+resource "local_file" "prod_ec2_info" {
+  filename = "ec2-info.txt"
+  content  = "${module.ec2_prod.ec2_public_ip} ${module.ec2_prod.ec2_private_ip}"
+}
+```
+
+Ici, on commence par définir dans le provider "aws", la région dans laquelle on veut créer notre instance. Puis on fait appel au module ec2module pour charger nos différentes variables relatives à l'EC2. finalement, on crée une ressource locl_file qui va permettre de générer un fichier texte, dans lequel on va stocker nos adresses IP privé et publique.
+
+
 ### Résultats obtenus
 
 </div>
