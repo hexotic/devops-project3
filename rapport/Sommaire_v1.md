@@ -15,7 +15,7 @@
   * Intégration continue
     * Github
     * Dockerisation / conteneurisation
-    * Orchestrateur (Jenkins)
+    * Jenkins
       * Test (curl)
       * Scan (Snyk)
   * Déploiement continu
@@ -24,6 +24,6 @@
     * Ansible
     * Résultats obtenus
 
-* Réussites, Problèmes rencontrés, axes d'amélioration
+* Réussites, Problèmes rencontrés et axes d'amélioration
 
 * Conclusion

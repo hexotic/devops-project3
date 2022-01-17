@@ -179,7 +179,7 @@ services:
     container_name: web
     image: "${USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
     ports:
-      - "8000:8000"
+      - "80:8000"
     links:
       - postgres
     environment:
@@ -249,7 +249,7 @@ docker ps -a
 <img src="./img/docker_compose_up.png" />
 </div><br>
 
-Il est donc possible, via un navigateur, de vérifier que l'application Django s'affiche correctement en allant sur l'url http://<IP publique>:8000.
+Il est donc possible, via un navigateur, de vérifier que l'application Django s'affiche correctement en allant sur l'url http://<IP publique>.
 
 <div style="text-align: center">
 <img src="./img/django_navigateur.png" />
@@ -801,7 +801,245 @@ resource "local_file" "prod_ec2_info" {
 
 Ici, on commence par définir dans le provider "aws", la région dans laquelle on veut créer notre instance. Puis on fait appel au module ec2module pour charger nos différentes variables relatives à l'EC2. finalement, on crée une ressource locl_file qui va permettre de générer un fichier texte, dans lequel on va stocker nos adresses IP privé et publique.
 
+#### Ansible
 
-### Résultats obtenus
+Le diagramme en dessous illustre la structure globale du repertoire ansible qui contient les roles docker et docker-compose qui permettent d'installer docker et docker-compose sur les machines distantes preprod et prod.
 
+``` 
++--- ansible
+|   +--- roles
+|   |   +--- dockercompose_role
+|   |   +--- docker_role
+|   |   
+|   |   
+|   +--- hosts.yml
+|   +--- preprod.yml
+|   +--- prod.yml
+```
+
+Le fichier hosts.yml represente le fichier d'inventaire Il permet specififier les hotes sur lesquelles on va appliquer les playbooks. Son contenu est le suivant:
+
+```
+all:
+  children:
+    ansible:
+      hosts:
+        localhost:
+          ansible_connection: local
+          ansible_user: ubuntu
+
+    preprod:
+      vars:
+        env: preprod
+
+      hosts:
+        worker01:
+          ansible_host: "{{ preprod_ip }}"
+          ansible_user: ubuntu
+          ansible_password: ubuntu
+          ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+    prod:
+      vars:
+        env: prod
+
+      hosts:
+        worker02:
+          ansible_host: "{{ prod_ip }}"
+          ansible_user: ubuntu
+          ansible_password: ubuntu
+          ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+```
+
+Ici on specifie les details comme le nom de l'host et les parametres qui permettent d'y connecter. Les fichiers preprod.yml et prod.yml representent les playbooks pour executer les roles docker et docker-compose sur les instances preprod et prod, respectivement.
+
+Par exemple, en illustre en dessous le contenu du fichier prod.yml 
+
+```
+- name:  "deploy docker compose"
+  hosts: prod
+  become: true
+  roles:
+    - docker_role
+    - dockercompose_role
+  
+  tasks:
+    - name: "docker-compose"
+      command: 'docker-compose --env-file ./env_file up -d'
+```
+
+Ici on definit les hosts sur lesquelles on va appliquer les roles, on fait aussi l'escalation de prévilège via le become: True. On définit les noms des roles qu'on va appliquer. Dans ce cas docker et docker-compose et on demande, apres avoir terminé l'execution des roles, d'executer le docker-compose. 
+
+Le diagramme en dessous decrit la structure du repertoire docker role
+
+```
++--- docker_role-main
+|   +--- defaults
+|   |   +--- main.yml
+|   +--- meta
+|   |   +--- main.yml
+|   +--- README.md
+|   +--- tasks
+|   |   +--- main.yml
+|   +--- templates
+|   |   +--- docker_install.sh.j2
+|   +--- tests
+|   |   +--- inventory
+|   |   +--- main.yml
+```
+
+Les deux sous repertoires importants sont templates et tasks.
+Le premier contient le fichier docker_install.sh.j2 qui contient les commandes bash necessaires pour installer docker. Le second contient le playbook main.yml qui contient les instruction necssaires permettant l'installation de docker sur les machines distantes. Les instructions sont les suivantes
+
+```
+# Tasks for the role
+
+# ----- Install docker 
+  - name: "generate install script 1"
+    template:
+      src: templates/docker_install.sh.j2
+      dest: /home/{{ ansible_user }}/docker_install.sh
+  
+  - name: "Exec docker install 2"
+    command: 'sh /home/{{ ansible_user }}/docker_install.sh'
+
+  - name: "Enable & start docker 3"
+    service:
+      name: docker
+      state: started
+      enabled: yes
+
+  - name: "Add user to group docker 4"
+    user:
+      name: "{{ ansible_user }}"
+      append: yes
+      groups:
+        - docker
+
+  - name: install pip3
+    package:
+      name: python3-pip
+      state: present
+
+  - name: install docker module
+    pip:
+      name: docker
+      state: present
+```
+
+Au niveau de l'instruction N°1, on lui demande de copier le script docker_install.sh.j2 depuis templates vers le repertoire local de la machine distante. Puis en 2 , on lui demande d'executer le script. En 3, on lui demande démarrer  docker. En 4, demande d'ajouter l'utilisateur au group docker. Finallement on lui demande d'installer pip3 et d'installer le module docker.
+
+Le diagramme en dessous decrit la structure du repertoire docker-compose role
+
+```
++--- dockercompose_role-main
+|   +--- defaults
+|   |   +--- main.yml
+|   +--- meta
+|   |   +--- main.yml
+|   +--- README.md
+|   +--- tasks
+|   |   +--- main.yml
+|   +--- tests
+|   |   +--- inventory
+|   |   +--- main.yml
+```
+
+Le sous repertoire le plus important est celui de tasks. Il contient le playbook main.yml qui contient les instruction necssaires permettant l'installation de docker-compose sur les machines distantes. Les instructions sont les suivantes
+
+```
+# Tasks for the role
+
+  - name: "Download install script"
+    command: 'curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose'
+
+  - name: "Chmod docker-compose"
+    command: 'chmod +x /usr/local/bin/docker-compose'
+
+  - name: "Create symbolic link"
+    command: 'ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose'
+
+  - name: install pip3
+    package:
+      name: python3-pip
+      state: present
+
+  - name: install docker compose module
+    pip:
+      name: docker-compose
+      state: present
+```
+
+Ici on commence par  telecharger le script d'installation puis on chage de droits au script telechargé. On le lien symbolique, on install pip.3 puis in install docker compose.
+
+## Résultats obtenus
+
+Parmi les résultats obtenus, il est possible d'afficher le résultat du pipeline dans le dashboard de Jenkins. Sur l'illustration présentée ci-dessous, il est possible d'apercevoir les pipelines fonctionnels (avec toutes les étapes colorées en vert) et un pipeline en cours d'exécution (étape en bleu).
+
+<div style="text-align: center">
+<img src="./img/post_actions/jenkins_pipeline_running_success.PNG" />
+</div><br>
+
+Lors de l'exécution avec succès de l'intégralité du pipeline, la nouvelle version de l'application web s'affiche correctement dans le navigateur (http://<IP_publique_Prod>).
+
+<div style="text-align: center">
+<img src="./img/prod_navigateur.PNG" />
+</div><br>
+
+Parmi les "post-actions" paramétrées, un webhook permet d'afficher, en temps réel, le status du pipeline dans le fichier README.MD du dépôt GitHub https://github.com/hexotic/devops-project3. Ce badge peut prendre, comme illustré ci-dessous, les trois status "failed", "running", et "success".
+
+<div style="text-align: center">
+<img src="./img/post_actions/github_failed.PNG" />
+</div><br>
+<div style="text-align: center">
+<img src="./img/post_actions/github_running.PNG" />
+</div><br>
+<div style="text-align: center">
+<img src="./img/post_actions/github_success_pull_request.PNG" />
+</div><br>
+
+Comme visible sur l'image précédente, un pull-request est necessaire lors de l'ajout de modifications validées dans le pipeline pour les ajouter à la branche master du GitHub et au pipeline principal.
+
+Pour finir, une notification est envoyée sur Slack (outil de communication collaboratif) pour avertir du status du pipeline à toutes les personnes de l'équipe.
+
+<div style="text-align: center">
+<img src="./img/post_actions/slack2.PNG" />
+</div><br>
+<div style="text-align: center">
+<img src="./img/post_actions/slack4.PNG" />
+</div><br>
+
+Ainsi, l'objectif de création d'un pipeline CI/CD pour le déploiement de l'application web, en passant par toutes les étapes requises, est donc atteint.
+De plus, pour améliorer l'exécution de l'application et les temps de déploiement, ce pipeline CI/CD a été optimisé et rendu robuste.
+
+# Problèmes rencontrés et axes d'amélioration
+
+## Problèmes rencontrés
+
+Tout au long du projet, nous avons rencontré différents problèmes :
+
+* La compatibilité des versions des différents composants (modules python et base de données)
+* Le "timing" entre :
+  * Le déploiement de l'infrastructure
+  * Le provisionning de l'infrastructure
+  * Le déploiement de l'application
+  * Les phases de tests de l'application
+* L'intégration du plugin Snyk dans Jenkins
+
+## Axes d'amélioration
+
+Parmi les axes d'améliorations possibles :
+
+* Ajout d'une adresse IP publique fixe pour l'environnement de production afin de conserver la même URL pour les utilisateurs
+* Ajout d'un volume de stockage persistant pour la base de données associée à l'application
+* Modifier la stratégie de déploiement de la production en cas de mise à jour afin de supprimer le temps d'indisponibilité de l'application
+* Ajout d'une étape pour le contrôle de qualité du code (pylint et/ou SonarQube)
+
+
+# Conclusion
+
+À partir d'un dépôt GitHub contenant le code d'une application et d'un cahier des charges, nous avons mis en place l'intégralité d'un pipeline CI/CD avec tous les outils recommandés en 3 jours.<br>
+Pour la partie "Continuous Integration" (CI), nous avons d'abord conteneurisé l'application avec Docker et Docker-compose pour lancer cette application et tester son affichage. Nous avons ajouté un scan des vulnérabilités du code de cette application. Ces étapes permettent d'avoir une confiance dans le code de l'application et ainsi de pouvoir d'envoyer l'image sur un dépôt distant (DockerHub).<br>
+Pour la partie "Continuous Deployment" (CD), nous avons utilisé le paradigme d'Infrastructure as code (Ansible et Terraform) pour déployer et provisionner de façon automatique les environnements nécessaires de test en pré-production et en production.<br>
+Nous avons mis en place un pipeline Jenkins pour automatiser et ordonnancer ces différentes étapes du pipeline.
 </div>
