@@ -5,25 +5,38 @@
   * Contexte du projet et organisation
 
 * Présentation du projet
-  * Django
-  * Infrastructure
-  * Outils recommandés (Jenkins, Ansible, ...)
-  * pipeline conseillé (CI/CD)
-
-* Travaux réalisés
-  * Détails du pipeline
-  * Intégration continue
-    * Github
-    * Dockerisation / conteneurisation
+  * Description des travaux demandés
+    * Objectif
+    * Outils recommandés
+    * Build
+    * Sécurité
+  * Presentation de Django
+  * Outils recommandés
+    * Docker
     * Jenkins
-      * Test (curl)
-      * Scan (Snyk)
-  * Déploiement continu
-    * Environnements (aws, preprod, prod)
     * Terraform
     * Ansible
-    * Résultats obtenus
+    * Snyk
 
-* Réussites, Problèmes rencontrés et axes d'amélioration
+* Travaux réalisés
+  * Organisation
+  * Création d'une machine virtuelle (EC2) AWS
+  * Détails du pipeline
+    * Intégration continue (CI)
+      * GitHub
+      * Conteneurisation
+      * Jenkins
+    * Déploiement continu (CD)
+      * Environnements
+        * Environnement de préproduction
+        * Environnement de production
+        * Infrastructure as Code (IaC)
+      * Terraform
+      * Ansible
+  * Résultats obtenus
+
+* Problèmes rencontrés et axes d'amélioration
+  * Problèmes rencontrés
+  * Axes d'amélioration
 
 * Conclusion
