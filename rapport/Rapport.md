@@ -10,7 +10,7 @@
     * Outils recommandés
     * Build
     * Sécurité
-  * Presentation de Django
+  * Présentation de Django
   * Outils recommandés
     * Docker
     * Jenkins
@@ -160,11 +160,11 @@ Pour l'étape du build, on nous demande de produire un Dockerfile pour conteneur
 
 On nous demande de bien tenir compte l'aspect sécurité  de ce projet et d'introduire les meilleures pratiques de sécurité lors de la mise en oeuvre des differents scripts.
 
-## Presentation de Django
+## Présentation de Django
 
 Django est un framework de développement Web open source , écrit en Python. L'objectif fondamental de Django est de faciliter la création de sites Web complexes basés sur des bases de données.  Python est utilisé partout dans le framework, même pour les paramètres, les fichiers et les modèles de données. Django fournit également une interface administrative facultative de création, lecture, mise à jour et suppression qui est générée dynamiquement par introspection et configurée via des modèles d'administration. Certains sites bien connus utilisent Django; nous citons à titre d'exemple: Instagram ,  Mozilla , Disqus , Bitbucket....
 
-Dans un site web traditionnel orienté-données, une application web attend une requête HTTP d'un navigateur web (ou tout autre client). Quand une requête est reçue, l'application en comprend les besoins d'après l'URL et parfois d'après les informations en POST data ou GET data. En fonction de ce qui est attendu, elle peut ensuite lire ou écrire l'information dans une base de données ou réaliser une autre tâche requise pour satisfaire la requête. L'application renvoie ensuite une réponse au navigateur web, créant souvent en dynamique une page HTML affichée dans le navigateur où les données récupérées sont insérées dans les balises d'un modèle HTML.
+Dans un site web traditionnel orienté données, une application web attend une requête HTTP d'un navigateur web (ou tout autre client). Quand une requête est reçue, l'application en comprend les besoins d'après l'URL et parfois d'après les informations en POST data ou GET data. En fonction de ce qui est attendu, elle peut ensuite lire ou écrire l'information dans une base de données ou réaliser une autre tâche requise pour satisfaire la requête. L'application renvoie ensuite une réponse au navigateur web, créant souvent en dynamique une page HTML affichée dans le navigateur où les données récupérées sont insérées dans les balises d'un modèle HTML.
 
 <div style="text-align: center">
 <img src=./img/figures/django.png width="50000" height="400" ><br>[Fig. Structure du framework Django]
@@ -180,7 +180,7 @@ Les applications web Django regroupent généralement le code qui gère chacune 
 
 **URLs** :  Bien qu'il soit possible de traiter les requêtes de chaque URL via une fonction unique, il est bien plus viable d'écrire une fonction de vue isolée qui gèrera chaque ressource. Un mapper URL est utilisé pour rediriger les requêtes HTTP à la vue appropriée d'après l'URL de requête. Le mapper URL peut aussi faire la correspondance entre des patterns de chaînes de caractères ou de nombres qui apparaissent dans une URL et passer ces derniers comme données dans une fonction de vue.
 
-## Outils recommandées
+## Outils recommandés
 
 ### Docker
 
@@ -224,7 +224,7 @@ Terraform a deux composants principaux qui composent son architecture:
 
 * *Noyau Terraform* Terraform Core utilise deux sources d'entrée pour faire son travail. Dans un premier temps, la source d'entrée est une configuration Terraform qu'on configure en tant qu'utilisateur. Ici, on définit ce qui doit être créé ou provisionné. Et la seconde source d'entrée est le tfstat, dans lequel terraform maintient l'état à jour de la configuration actuelle de l'infrastructure.
 Donc, ce que fait le noyau de terraform, c'est qu'il prend les entrées, et il élabore le plan de tout ce qui doit être réalisé. Il compare l'état actuel à la configuration desirée. Il détermine ce qui doit être fait pour atteindre cet état souhaité dans le fichier de configuration. Il indique ce qui doit être créé, ce qui doit être mis à jour, ce qui doit être supprimé pour créer et provisionner l'infrastructure.
-* *Les fournisseurs* La, il peut s'agir de fournisseurs de cloud comme AWS, Azure ou d'autres infrastructures, en tant que plate-forme de services.
+* *Les fournisseurs* : il peut s'agir de fournisseurs de cloud comme AWS, Azure ou d'autres infrastructures, en tant que plate-forme de services.
 
 Terraform possède de nombreux avantages : il utilise une syntaxe simple, il peut mettre à disposition une infrastructure dans plusieurs clouds et centres de données sur site, et il peut remettre à disposition des infrastructures de façon sécurisée et efficace en réponse aux changements de configuration. Toutes ces qualités en font actuellement l'un des outils d'automatisation d'infrastructure les plus populaires.
 
@@ -252,7 +252,7 @@ Snyk est un outil qui peut aider à trouver des vulnérabilités connues dans le
 
 # Travaux réalisés
 
-L'objectif de ce projet est de réalisé un pipeline CI/CD automatisé d'une application web Django conteneurisée. Dans ce but, l'utilisation des outils suivants est imposée :
+L'objectif de ce projet est de réaliser un pipeline CI/CD automatisé d'une application web Django conteneurisée. Dans ce but, l'utilisation des outils suivants est imposée :
 
 * Jenkins
 * Docker-compose
@@ -267,11 +267,11 @@ De plus, le pipeline CI/CD proposé doit permettre d'implémenter toutes les ét
 
 ## Organisation
 
-Afin de pouvoir communiquer et de travailler de manière collaborative, nous avons mis en place un Discord avec une salle textuelle et deux salles de réunions (vocales). Ainsi, dès le début du projet, chaque membre de l'équipe a étudié l'énonce du projet pour pouvoir échanger à propos de notre compréhension des différentes étapes à suivre pour mener à bien ce projet. En journée, nous avons travaillé à la fois en binôme (matinée) mais aussi tous ensemble afin de pouvoir bénéficier de l'expertise de chacun et de mettre en relation le travail fourni par chaque équipe. Le fait de travailler en binôme a permis de compléter les compétences de chacun.
+Afin de pouvoir communiquer et de travailler de manière collaborative, nous avons mis en place un Discord avec une salle textuelle et deux salles de réunions (vocales). Ainsi, dès le début du projet, chaque membre de l'équipe a étudié l'énoncé du projet pour pouvoir échanger à propos de notre compréhension des différentes étapes à suivre pour mener à bien ce projet. En journée, nous avons travaillé à la fois en binôme (matinée) mais aussi tous ensemble afin de pouvoir bénéficier de l'expertise de chacun et de mettre en relation le travail fourni par chaque équipe. Le fait de travailler en binôme a permis de compléter les compétences de chacun.
 
 ## Création d'une machine virtuelle (EC2) AWS
 
-Pour commencer le projet, nous avons créé une instance EC2 sur AWS dont les caracteristiques sont les suivantes :
+Pour commencer le projet, nous avons créé une instance EC2 sur AWS avec les caractéristiques suivantes :
 t2.large avec 20Gb de stockage, un groupe de sécurité avec les ports 8080, 22 et 80 ouverts. Ainsi, il a fallu réaliser les étapes illustrées ci-dessous :
 
 <div style="text-align: center">
@@ -1053,7 +1053,7 @@ Ici, on commence par définir dans le provider "aws", la région dans laquelle o
 
 #### Ansible
 
-Le diagramme en dessous illustre la structure globale du repertoire ansible qui contient les roles docker et docker-compose qui permettent d'installer docker et docker-compose sur les machines distantes preprod et prod.
+Le diagramme ci-dessous illustre la structure globale du repertoire ansible qui contient les roles docker et docker-compose qui permettent d'installer docker et docker-compose sur les machines distantes preprod et prod.
 
 ``` 
 +--- ansible

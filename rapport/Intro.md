@@ -51,6 +51,6 @@ En plus des différentes technologies utilisées pour assurer toutes ces étapes
 
 Le projet décrit dans ce rapport est un projet de fin de formation réalisée avec l'institut de formation AJC. Dans le cadre d'une POEI avec la société Umanis, cette formation "Consultant DevOps" de trois mois a pour objectif principal de comprendre les enjeux de la méthodologie DevOps par l'administration et l'exploitation d'infrastructures Linux, l'utilisation de ressources du cloud AWS et la mise en oeuvre d'une plateforme d’intégration continue.
 
-Ce projet a été réalisé par Lilya Ait Mokhtar, Christophe Leviantis, Alain Mariathas, Yamen Othmani et Michael Cholay. Étant un projet pédagogique et pour respecter les valeurs DevOps de culture, de solidarité et de partage de connaissance, toutes les taches ont été effectuées avec l'intégralité du groupe.
+Ce projet a été réalisé par Lilya Ait Mokhtar, Christophe Levantis, Alain Mariathas, Yamen Othmani et Michael Cholay. Étant un projet pédagogique et pour respecter les valeurs DevOps de culture, de solidarité et de partage de connaissance, toutes les taches ont été effectuées avec l'intégralité du groupe.
 
 </div>

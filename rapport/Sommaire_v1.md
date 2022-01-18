@@ -10,7 +10,7 @@
     * Outils recommandés
     * Build
     * Sécurité
-  * Presentation de Django
+  * Présentation de Django
   * Outils recommandés
     * Docker
     * Jenkins
